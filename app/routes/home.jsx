@@ -98,7 +98,7 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-0">
       {/* ── HERO ── */}
-      <section className="bg-red-700 text-white">
+      <section className="bg-red-400 text-white">
         <div className="max-w-7xl mx-auto px-4 py-20 flex flex-col items-center text-center gap-6">
           <span className="text-6xl">✝</span>
           <h1 className="text-4xl md:text-5xl font-bold leading-tight">

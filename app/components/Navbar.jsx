@@ -14,36 +14,37 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="bg-red-700 text-white shadow-md sticky top-0 z-50">
+    <header className="bg-white text-shadow-blue-500 shadow-md sticky top-0 z-50">
       {/* Top bar */}
       <div className="bg-red-900 text-xs text-center py-1 text-red-100">
         Free shipping on orders over KES 3,000 | Catholic Online Store Kenya
       </div>
 
       {/* Main nav */}
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-26">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-2xl">✝</span>
+          <img src="/paulines2 logo.png" alt="logo" className="h-32 w-auto" />
+          {/* <span className="text-2xl">✝</span> */}
           <span className="hidden sm:block leading-tight">
             Catholic
             <br />
-            <span className="text-red-200 text-sm font-normal">
+            <span className="text-blue-800 text-xl font-normal">
               Online Store
             </span>
           </span>
         </Link>
 
         {/* Desktop links */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+        <nav className="hidden md:flex items-center gap-6 text-lg font-medium">
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
                 isActive
-                  ? "text-white border-b-2 border-white pb-0.5"
-                  : "text-red-100 hover:text-white transition"
+                  ? "text-blue-800 border-b-2 border-white pb-0.5"
+                  : "text-blue-800 hover:text-red-500 transition"
               }
             >
               {link.label}
@@ -54,7 +55,7 @@ export default function Navbar() {
         {/* Right icons */}
         <div className="flex items-center gap-4">
           {/* Search */}
-          <button className="hidden sm:block text-red-100 hover:text-white">
+          <button className="hidden sm:block text-blue-800 hover:text-red-500">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -73,7 +74,7 @@ export default function Navbar() {
           {/* Account */}
           <Link
             to="/login"
-            className="hidden sm:block text-red-100 hover:text-white"
+            className="hidden sm:block text-blue-800 hover:text-red-500"
           >
             <svg
               className="w-5 h-5"
@@ -91,7 +92,10 @@ export default function Navbar() {
           </Link>
 
           {/* Cart */}
-          <Link to="/cart" className="relative text-red-100 hover:text-white">
+          <Link
+            to="/cart"
+            className="relative text-blue-800 hover:text-red-500"
+          >
             <svg
               className="w-5 h-5"
               fill="none"
