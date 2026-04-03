@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -7,15 +8,16 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError(null);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-
-    // Basic validation
     if (!form.email || !form.password) {
       setError("Please fill in all fields.");
       return;
@@ -24,23 +26,19 @@ export default function Login() {
       setError("Please enter a valid email address.");
       return;
     }
-
-    // Simulate API call (we will connect to real backend in Step 2)
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await login({ email: form.email, password: form.password });
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "Invalid email or password.");
+    } finally {
       setLoading(false);
-      // Simulate wrong password for demo
-      if (form.password !== "password123") {
-        setError("Invalid email or password. Try password: password123");
-        return;
-      }
-      alert("Login successful! (Backend connection coming in Step 2)");
-    }, 1500);
+    }
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-16">
-      {/* Card */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm w-full max-w-md p-8 flex flex-col gap-6">
         {/* Logo */}
         <div className="text-center">
@@ -138,14 +136,14 @@ export default function Login() {
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
-        {/* Social logins (UI only for now) */}
+        {/* Social buttons (UI only) */}
         <div className="flex flex-col gap-3">
           <button className="flex items-center justify-center gap-3 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
-            <span className="text-lg">G</span>
+            <span className="text-lg font-bold">G</span>
             Continue with Google
           </button>
           <button className="flex items-center justify-center gap-3 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition font-medium">
-            <span className="text-lg">f</span>
+            <span className="text-lg font-bold">f</span>
             Continue with Facebook
           </button>
         </div>
@@ -162,7 +160,6 @@ export default function Login() {
         </p>
       </div>
 
-      {/* Back to shop */}
       <Link
         to="/shop"
         className="mt-6 text-sm text-gray-400 hover:text-red-600 transition"

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -17,13 +18,15 @@ export default function Register() {
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
+  const { register } = useAuth();
+  const navigate = useNavigate();
+
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error for this field as user types
     setErrors((prev) => ({ ...prev, [name]: null }));
   }
 
@@ -42,23 +45,31 @@ export default function Register() {
     return e;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-
-    // Simulate API call
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await register({
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+      });
       setSuccess(true);
-    }, 1500);
+    } catch (err) {
+      setErrors({ email: err.message });
+    } finally {
+      setLoading(false);
+    }
   }
 
-  // ── Success state ──
+  // ── Success screen ──
   if (success) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
@@ -70,16 +81,16 @@ export default function Register() {
             <span className="font-semibold text-gray-700">
               {form.firstName}
             </span>
-            ! Your account has been created successfully.
+            ! Your account has been created and you are now logged in.
           </p>
           <Link
-            to="/login"
+            to="/"
             className="bg-red-700 text-white font-bold py-3 rounded-xl hover:bg-red-800 transition"
           >
-            Sign In Now
+            Go to Home
           </Link>
           <Link to="/shop" className="text-sm text-gray-400 hover:text-red-600">
-            Browse Shop First →
+            Browse Shop →
           </Link>
         </div>
       </div>
@@ -102,7 +113,6 @@ export default function Register() {
           </Link>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Name row */}
           <div className="grid grid-cols-2 gap-3">
@@ -116,11 +126,7 @@ export default function Register() {
                 value={form.firstName}
                 onChange={handleChange}
                 placeholder="John"
-                className={`border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                  errors.firstName
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300"
-                }`}
+                className={`border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${errors.firstName ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
               {errors.firstName && (
                 <p className="text-xs text-red-500">{errors.firstName}</p>
@@ -136,11 +142,7 @@ export default function Register() {
                 value={form.lastName}
                 onChange={handleChange}
                 placeholder="Doe"
-                className={`border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                  errors.lastName
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300"
-                }`}
+                className={`border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${errors.lastName ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
               {errors.lastName && (
                 <p className="text-xs text-red-500">{errors.lastName}</p>
@@ -159,9 +161,7 @@ export default function Register() {
               value={form.email}
               onChange={handleChange}
               placeholder="you@example.com"
-              className={`border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                errors.email ? "border-red-400 bg-red-50" : "border-gray-300"
-              }`}
+              className={`border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${errors.email ? "border-red-400 bg-red-50" : "border-gray-300"}`}
             />
             {errors.email && (
               <p className="text-xs text-red-500">{errors.email}</p>
@@ -184,9 +184,7 @@ export default function Register() {
                 value={form.phone}
                 onChange={handleChange}
                 placeholder="700 000 000"
-                className={`flex-1 border rounded-r-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                  errors.phone ? "border-red-400 bg-red-50" : "border-gray-300"
-                }`}
+                className={`flex-1 border rounded-r-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${errors.phone ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
             </div>
             {errors.phone && (
@@ -206,11 +204,7 @@ export default function Register() {
                 value={form.password}
                 onChange={handleChange}
                 placeholder="At least 8 characters"
-                className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 pr-10 ${
-                  errors.password
-                    ? "border-red-400 bg-red-50"
-                    : "border-gray-300"
-                }`}
+                className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 pr-10 ${errors.password ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
               <button
                 type="button"
@@ -223,8 +217,7 @@ export default function Register() {
             {errors.password && (
               <p className="text-xs text-red-500">{errors.password}</p>
             )}
-
-            {/* Password strength indicator */}
+            {/* Password strength bar */}
             {form.password.length > 0 && (
               <div className="flex gap-1 mt-1">
                 {[1, 2, 3, 4].map((level) => (
@@ -258,23 +251,14 @@ export default function Register() {
               value={form.confirmPassword}
               onChange={handleChange}
               placeholder="Repeat your password"
-              className={`border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                errors.confirmPassword
-                  ? "border-red-400 bg-red-50"
-                  : "border-gray-300"
-              }`}
+              className={`border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 ${errors.confirmPassword ? "border-red-400 bg-red-50" : "border-gray-300"}`}
             />
             {errors.confirmPassword && (
               <p className="text-xs text-red-500">{errors.confirmPassword}</p>
             )}
-            {/* Match indicator */}
             {form.confirmPassword.length > 0 && (
               <p
-                className={`text-xs font-medium ${
-                  form.password === form.confirmPassword
-                    ? "text-green-600"
-                    : "text-red-500"
-                }`}
+                className={`text-xs font-medium ${form.password === form.confirmPassword ? "text-green-600" : "text-red-500"}`}
               >
                 {form.password === form.confirmPassword
                   ? "✓ Passwords match"
@@ -329,7 +313,6 @@ export default function Register() {
           </button>
         </form>
 
-        {/* Login link */}
         <p className="text-center text-sm text-gray-500">
           Already have an account?{" "}
           <Link

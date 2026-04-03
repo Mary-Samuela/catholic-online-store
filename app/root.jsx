@@ -1,4 +1,6 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 import "./app.css";
 
 export function Layout({ children }) {
@@ -20,5 +22,11 @@ export function Layout({ children }) {
 }
 
 export default function Root() {
-  return <Outlet />;
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <Outlet />
+      </CartProvider>
+    </AuthProvider>
+  );
 }

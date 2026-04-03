@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
+import { productAPI } from "../services/api";
+import { useCart } from "../context/CartContext";
 
-// ── Temporary mock data (we'll replace with real DB data later) ──
 const categories = [
   {
     id: "books",
@@ -28,65 +30,6 @@ const categories = [
   },
 ];
 
-const featuredProducts = [
-  {
-    id: 1,
-    name: "Holy Bible (RSV)",
-    price: 1200,
-    category: "books",
-    badge: "Best Seller",
-  },
-  {
-    id: 2,
-    name: "Rosary Beads (Wood)",
-    price: 450,
-    category: "articles",
-    badge: "Popular",
-  },
-  {
-    id: 3,
-    name: "Divine Mercy Novena CD",
-    price: 800,
-    category: "av",
-    badge: "New",
-  },
-  {
-    id: 4,
-    name: "Crucifix (Wall Mount)",
-    price: 950,
-    category: "articles",
-    badge: null,
-  },
-  {
-    id: 5,
-    name: "Catechism of the Catholic Church",
-    price: 1500,
-    category: "books",
-    badge: "Best Seller",
-  },
-  {
-    id: 6,
-    name: "Miraculous Medal",
-    price: 300,
-    category: "articles",
-    badge: "Popular",
-  },
-  {
-    id: 7,
-    name: "Gregorian Chant DVD",
-    price: 700,
-    category: "av",
-    badge: "New",
-  },
-  {
-    id: 8,
-    name: "Daily Prayer Book",
-    price: 650,
-    category: "books",
-    badge: null,
-  },
-];
-
 const trustPoints = [
   { icon: "🚚", title: "Free Shipping", desc: "On orders over KES 3,000" },
   { icon: "🔒", title: "Secure Payment", desc: "M-Pesa, cards & more" },
@@ -94,11 +37,25 @@ const trustPoints = [
   { icon: "📦", title: "Fast Delivery", desc: "Nairobi & nationwide" },
 ];
 
+const categoryIcon = { books: "📖", articles: "✝️", av: "🎵" };
+
 export default function Home() {
+  const [featured, setFeatured] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+
+  useEffect(() => {
+    productAPI
+      .getFeatured()
+      .then((data) => setFeatured(data))
+      .catch((err) => console.error("Failed to load featured:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="flex flex-col gap-0">
       {/* ── HERO ── */}
-      <section className="bg-red-400 text-white">
+      <section className="bg-red-700 text-white">
         <div className="max-w-7xl mx-auto px-4 py-20 flex flex-col items-center text-center gap-6">
           <span className="text-6xl">✝</span>
           <h1 className="text-4xl md:text-5xl font-bold leading-tight">
@@ -156,7 +113,7 @@ export default function Home() {
               <Link
                 key={cat.id}
                 to={`/shop?category=${cat.id}`}
-                className={`border-2 rounded-xl p-8 flex flex-col items-center text-center gap-3 hover:shadow-md transition group ${cat.color}`}
+                className={`border-2 rounded-xl p-8 flex flex-col items-center text-center gap-3 hover:shadow-md transition ${cat.color}`}
               >
                 <span className="text-5xl">{cat.icon}</span>
                 <h3 className="text-xl font-bold">{cat.label}</h3>
@@ -190,15 +147,37 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="border border-gray-200 rounded-xl overflow-hidden animate-pulse"
+                >
+                  <div className="bg-gray-200 h-44" />
+                  <div className="p-4 flex flex-col gap-2">
+                    <div className="bg-gray-200 h-3 rounded w-3/4" />
+                    <div className="bg-gray-200 h-3 rounded w-1/2" />
+                    <div className="bg-gray-200 h-8 rounded mt-1" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {featured.map((product) => (
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onAddToCart={() => addToCart(product, 1)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ── BANNER / QUOTE ── */}
+      {/* ── SCRIPTURE BANNER ── */}
       <section className="bg-red-700 text-white py-16">
         <div className="max-w-3xl mx-auto px-4 text-center">
           <span className="text-4xl">✝</span>
@@ -218,29 +197,37 @@ export default function Home() {
   );
 }
 
-// ── ProductCard component (used only on this page for now) ──
-function ProductCard({ product }) {
+function ProductCard({ product, onAddToCart }) {
+  const [added, setAdded] = useState(false);
+
+  function handleAddToCart() {
+    onAddToCart();
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  }
+
+  const badgeColor = {
+    "Best Seller": "bg-red-600",
+    Popular: "bg-blue-600",
+    New: "bg-green-600",
+  };
+
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition group">
-      {/* Image placeholder — will be replaced with real images later */}
+    <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col">
       <div className="relative bg-gray-100 h-44 flex items-center justify-center">
         <span className="text-5xl opacity-30">
-          {product.category === "books"
-            ? "📖"
-            : product.category === "av"
-              ? "🎵"
-              : "✝️"}
+          {categoryIcon[product.category]}
         </span>
         {product.badge && (
-          <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded">
+          <span
+            className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${badgeColor[product.badge]}`}
+          >
             {product.badge}
           </span>
         )}
       </div>
-
-      {/* Info */}
-      <div className="p-4">
-        <p className="text-sm font-semibold text-gray-800 leading-tight">
+      <div className="p-4 flex flex-col flex-1">
+        <p className="text-sm font-semibold text-gray-800 leading-tight flex-1">
           {product.name}
         </p>
         <p className="text-red-700 font-bold mt-1">
@@ -248,13 +235,16 @@ function ProductCard({ product }) {
         </p>
         <div className="flex gap-2 mt-3">
           <Link
-            to={`/product/${product.id}`}
+            to={`/product/${product._id}`}
             className="flex-1 text-center border border-red-600 text-red-700 text-xs py-1.5 rounded-lg hover:bg-red-50 transition"
           >
             View
           </Link>
-          <button className="flex-1 bg-red-700 text-white text-xs py-1.5 rounded-lg hover:bg-red-800 transition">
-            Add to Cart
+          <button
+            onClick={handleAddToCart}
+            className={`flex-1 text-white text-xs py-1.5 rounded-lg transition ${added ? "bg-green-600" : "bg-red-700 hover:bg-red-800"}`}
+          >
+            {added ? "✓ Added!" : "Add to Cart"}
           </button>
         </div>
       </div>
