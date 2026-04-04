@@ -1,56 +1,34 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { orderAPI } from "../services/api";
 
-// ── Mock order items (will come from cart state/context later) ──
-const orderItems = [
-  {
-    id: 1,
-    name: "Holy Bible (RSV Catholic Edition)",
-    price: 1200,
-    quantity: 1,
-    category: "books",
-  },
-  {
-    id: 7,
-    name: "Wooden Rosary Beads",
-    price: 450,
-    quantity: 2,
-    category: "articles",
-  },
-  {
-    id: 13,
-    name: "Divine Mercy Novena CD",
-    price: 800,
-    quantity: 1,
-    category: "av",
-  },
-];
-
-const categoryIcon = { books: "📖", articles: "✝️", av: "🎵" };
 const SHIPPING_COST = 300;
-
 const STEPS = ["Delivery", "Payment", "Confirm"];
 
 export default function Checkout() {
+  const { items, totalPrice, clearCart } = useCart();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [step, setStep] = useState(0);
   const [placing, setPlacing] = useState(false);
-  const [ordered, setOrdered] = useState(false);
+  const [error, setError] = useState(null);
 
-  // ── Delivery form ──
   const [delivery, setDelivery] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
     address: "",
     city: "",
     county: "",
     notes: "",
   });
 
-  // ── Payment ──
   const [payMethod, setPayMethod] = useState("mpesa");
-  const [mpesaPhone, setMpesaPhone] = useState("");
+  const [mpesaPhone, setMpesaPhone] = useState(user?.phone || "");
   const [cardForm, setCardForm] = useState({
     number: "",
     name: "",
@@ -60,12 +38,42 @@ export default function Checkout() {
 
   const [deliveryErrors, setDeliveryErrors] = useState({});
 
-  // ── Calculations ──
-  const subtotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
-  const shipping = subtotal >= 3000 ? 0 : SHIPPING_COST;
-  const total = subtotal + shipping;
+  const shipping = totalPrice >= 3000 ? 0 : SHIPPING_COST;
+  const total = totalPrice + shipping;
 
-  // ── Delivery validation ──
+  // Redirect if cart is empty or not logged in
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <span className="text-6xl">🛒</span>
+        <h2 className="text-2xl font-bold text-gray-700">Your cart is empty</h2>
+        <Link
+          to="/shop"
+          className="bg-red-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-800"
+        >
+          Go to Shop
+        </Link>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <span className="text-6xl">🔒</span>
+        <h2 className="text-2xl font-bold text-gray-700">
+          Please login to checkout
+        </h2>
+        <Link
+          to="/login"
+          className="bg-red-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-800"
+        >
+          Login
+        </Link>
+      </div>
+    );
+  }
+
   function validateDelivery() {
     const e = {};
     if (!delivery.firstName.trim()) e.firstName = "Required";
@@ -96,90 +104,48 @@ export default function Checkout() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function placeOrder() {
+  async function placeOrder() {
     setPlacing(true);
-    setTimeout(() => {
-      setPlacing(false);
-      setOrdered(true);
-    }, 2000);
-  }
+    setError(null);
+    try {
+      // Build order items from real cart
+      const orderItems = items.map((item) => ({
+        product: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        category: item.category,
+      }));
 
-  // ── Order success ──
-  if (ordered) {
-    const orderNum = `COS-${Date.now().toString().slice(-6)}`;
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-16">
-        <div className="bg-white border border-gray-200 rounded-2xl p-10 max-w-md w-full text-center flex flex-col gap-5">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <span className="text-4xl">✓</span>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">Order Placed!</h2>
-          <p className="text-gray-500 text-sm leading-relaxed">
-            Thank you,{" "}
-            <span className="font-semibold text-gray-700">
-              {delivery.firstName}
-            </span>
-            ! Your order has been received. You will get a confirmation on{" "}
-            <span className="font-semibold text-gray-700">
-              {delivery.email}
-            </span>
-            .
-          </p>
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-xs text-gray-400 mb-1">Order number</p>
-            <p className="text-xl font-bold text-red-700 font-mono">
-              {orderNum}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 text-sm text-gray-500">
-            <p>
-              📍 Delivering to:{" "}
-              <span className="font-medium text-gray-700">
-                {delivery.city}, {delivery.county}
-              </span>
-            </p>
-            <p>
-              💳 Payment:{" "}
-              <span className="font-medium text-gray-700 capitalize">
-                {payMethod === "mpesa"
-                  ? "M-Pesa"
-                  : payMethod === "card"
-                    ? "Card"
-                    : "Cash on Delivery"}
-              </span>
-            </p>
-            <p>
-              📦 Total:{" "}
-              <span className="font-bold text-red-700">
-                KES {total.toLocaleString()}
-              </span>
-            </p>
-          </div>
-          <Link
-            to="/shop"
-            className="bg-red-700 text-white font-bold py-3 rounded-xl hover:bg-red-800 transition"
-          >
-            Continue Shopping
-          </Link>
-          <Link
-            to="/account"
-            className="text-sm text-gray-400 hover:text-red-600"
-          >
-            View My Orders →
-          </Link>
-        </div>
-      </div>
-    );
+      const orderData = {
+        orderItems,
+        deliveryAddress: delivery,
+        paymentMethod: payMethod,
+        subtotal: totalPrice,
+        shippingCost: shipping,
+        discount: 0,
+        total,
+      };
+
+      const order = await orderAPI.create(orderData);
+
+      // Clear cart after successful order
+      clearCart();
+
+      // Redirect to success page with order number
+      navigate(`/order-success?order=${order.orderNumber}&total=${total}`);
+    } catch (err) {
+      setError(err.message || "Failed to place order. Please try again.");
+      setPlacing(false);
+    }
   }
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="bg-red-700 text-white py-8">
         <div className="max-w-5xl mx-auto px-4">
           <h1 className="text-2xl font-bold mb-4">Checkout</h1>
-
-          {/* Step indicator */}
           <div className="flex items-center gap-0">
             {STEPS.map((label, i) => (
               <div key={label} className="flex items-center">
@@ -215,9 +181,16 @@ export default function Checkout() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* ── LEFT: Step content ── */}
+        {/* Left: Step content */}
         <div className="lg:col-span-2">
-          {/* ── STEP 0: Delivery ── */}
+          {/* Error banner */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+              {error}
+            </div>
+          )}
+
+          {/* STEP 0: Delivery */}
           {step === 0 && (
             <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-5">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -227,7 +200,6 @@ export default function Checkout() {
                 Delivery Information
               </h2>
 
-              {/* Name row */}
               <div className="grid grid-cols-2 gap-4">
                 <Field
                   label="First name"
@@ -257,7 +229,6 @@ export default function Checkout() {
                 placeholder="you@example.com"
               />
 
-              {/* Phone with prefix */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">
                   Phone number
@@ -345,7 +316,6 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* Delivery notes */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">
                   Delivery notes{" "}
@@ -363,7 +333,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ── STEP 1: Payment ── */}
+          {/* STEP 1: Payment */}
           {step === 1 && (
             <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-5">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -373,13 +343,17 @@ export default function Checkout() {
                 Payment Method
               </h2>
 
-              {/* Payment options */}
               <div className="flex flex-col gap-3">
                 {[
                   {
                     id: "mpesa",
                     label: "M-Pesa",
-                    desc: "Pay via Safaricom M-Pesa STK Push",
+                    desc: "Pay via Safaricom M-Pesa",
+                  },
+                  {
+                    id: "paypal",
+                    label: "PayPal",
+                    desc: "Pay securely with PayPal",
                   },
                   {
                     id: "card",
@@ -428,7 +402,8 @@ export default function Checkout() {
                   </p>
                   <p className="text-xs text-green-700">
                     Enter your M-Pesa number. You will receive an STK Push
-                    prompt on your phone to complete payment.
+                    prompt on your phone. Note: Live STK Push requires a
+                    registered Safaricom Daraja API account.
                   </p>
                   <div className="flex">
                     <span className="border border-r-0 border-gray-300 bg-white rounded-l-lg px-3 py-2.5 text-sm text-gray-500">
@@ -442,6 +417,19 @@ export default function Checkout() {
                       className="flex-1 border border-gray-300 rounded-r-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                     />
                   </div>
+                </div>
+              )}
+
+              {/* PayPal notice */}
+              {payMethod === "paypal" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-blue-800">
+                    PayPal Payment
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    You will be redirected to PayPal to complete your payment
+                    securely after confirming your order.
+                  </p>
                 </div>
               )}
 
@@ -523,15 +511,14 @@ export default function Checkout() {
                     <span className="font-bold">
                       KES {total.toLocaleString()}
                     </span>{" "}
-                    ready when your order arrives. Available within Nairobi
-                    only.
+                    ready. Available within Nairobi only.
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* ── STEP 2: Confirm ── */}
+          {/* STEP 2: Confirm */}
           {step === 2 && (
             <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-6">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -587,27 +574,32 @@ export default function Checkout() {
                     Edit
                   </button>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-gray-600 capitalize">
                   {payMethod === "mpesa" && `M-Pesa — +254 ${mpesaPhone}`}
+                  {payMethod === "paypal" && "PayPal — redirect after order"}
                   {payMethod === "card" &&
                     `Card ending in ${cardForm.number.slice(-4) || "----"}`}
                   {payMethod === "cod" && "Cash on Delivery"}
                 </p>
               </div>
 
-              {/* Items summary */}
+              {/* Items */}
               <div className="flex flex-col gap-3">
                 <p className="font-semibold text-gray-700 text-sm">
-                  Order items
+                  Order items ({items.length})
                 </p>
-                {orderItems.map((item) => (
+                {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={item._id}
                     className="flex items-center gap-3 text-sm"
                   >
                     <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
                       <span className="text-lg opacity-30">
-                        {categoryIcon[item.category]}
+                        {item.category === "books"
+                          ? "📖"
+                          : item.category === "av"
+                            ? "🎵"
+                            : "✝️"}
                       </span>
                     </div>
                     <span className="flex-1 text-gray-700">{item.name}</span>
@@ -619,11 +611,11 @@ export default function Checkout() {
                 ))}
               </div>
 
-              {/* Final total */}
+              {/* Totals */}
               <div className="border-t border-gray-100 pt-4 flex flex-col gap-2 text-sm">
                 <div className="flex justify-between text-gray-500">
                   <span>Subtotal</span>
-                  <span>KES {subtotal.toLocaleString()}</span>
+                  <span>KES {totalPrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-gray-500">
                   <span>Shipping</span>
@@ -647,7 +639,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* ── Navigation buttons ── */}
+          {/* Navigation buttons */}
           <div className="flex justify-between mt-5">
             {step > 0 ? (
               <button
@@ -688,17 +680,20 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* ── RIGHT: Order summary sidebar ── */}
+        {/* Right: Order summary sidebar */}
         <div className="flex flex-col gap-4">
           <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col gap-4 sticky top-24">
             <h3 className="font-bold text-gray-800">Order Summary</h3>
-
-            {orderItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 text-sm">
+            {items.map((item) => (
+              <div key={item._id} className="flex items-center gap-3 text-sm">
                 <div className="relative shrink-0">
                   <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                     <span className="text-lg opacity-25">
-                      {categoryIcon[item.category]}
+                      {item.category === "books"
+                        ? "📖"
+                        : item.category === "av"
+                          ? "🎵"
+                          : "✝️"}
                     </span>
                   </div>
                   <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
@@ -713,11 +708,10 @@ export default function Checkout() {
                 </span>
               </div>
             ))}
-
             <div className="border-t border-gray-100 pt-3 flex flex-col gap-2 text-sm">
               <div className="flex justify-between text-gray-500">
                 <span>Subtotal</span>
-                <span>KES {subtotal.toLocaleString()}</span>
+                <span>KES {totalPrice.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-gray-500">
                 <span>Shipping</span>
@@ -736,7 +730,6 @@ export default function Checkout() {
                 </span>
               </div>
             </div>
-
             <div className="flex flex-col gap-1.5 text-xs text-gray-400 pt-1 border-t border-gray-100">
               <span>🔒 SSL secured checkout</span>
               <span>📦 Estimated delivery: 2–4 business days</span>
@@ -748,7 +741,6 @@ export default function Checkout() {
   );
 }
 
-// ── Reusable field component ──
 function Field({
   label,
   name,

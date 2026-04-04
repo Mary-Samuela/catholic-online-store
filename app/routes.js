@@ -7,6 +7,7 @@ export default [
     route("product/:id", "routes/product.jsx"),
     route("cart", "routes/cart.jsx"),
     route("checkout", "routes/checkout.jsx"),
+    route("order-success", "routes/order-success.jsx"),
     route("login", "routes/login.jsx"),
     route("register", "routes/register.jsx"),
     route("account", "routes/account.jsx"),

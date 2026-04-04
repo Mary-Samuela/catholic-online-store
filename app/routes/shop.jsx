@@ -235,7 +235,9 @@ export default function Shop() {
 function ShopProductCard({ product, onAddToCart }) {
   const [added, setAdded] = useState(false);
 
-  function handleAddToCart() {
+  function handleAddToCart(e) {
+    e.preventDefault(); // stop card click from firing
+    e.stopPropagation();
     onAddToCart();
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -253,7 +255,10 @@ function ShopProductCard({ product, onAddToCart }) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col">
+    <Link
+      to={`/product/${product._id}`}
+      className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col cursor-pointer"
+    >
       <div className="relative bg-gray-100 h-40 flex items-center justify-center">
         <span className="text-5xl opacity-25">
           {categoryIcon[product.category]}
@@ -278,15 +283,9 @@ function ShopProductCard({ product, onAddToCart }) {
           KES {product.price.toLocaleString()}
         </p>
         <div className="flex gap-1.5 mt-3">
-          <Link
-            to={`/product/${product._id}`}
-            className="flex-1 text-center border border-red-600 text-red-700 text-xs py-1.5 rounded-lg hover:bg-red-50 transition"
-          >
-            Details
-          </Link>
           <button
             onClick={handleAddToCart}
-            className={`flex-1 text-white text-xs py-1.5 rounded-lg transition ${
+            className={`w-full text-white text-xs py-1.5 rounded-lg transition ${
               added ? "bg-green-600" : "bg-red-700 hover:bg-red-800"
             }`}
           >
@@ -294,6 +293,6 @@ function ShopProductCard({ product, onAddToCart }) {
           </button>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

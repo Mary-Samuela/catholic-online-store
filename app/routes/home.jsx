@@ -32,12 +32,17 @@ const categories = [
 
 const trustPoints = [
   { icon: "🚚", title: "Free Shipping", desc: "On orders over KES 3,000" },
-  { icon: "🔒", title: "Secure Payment", desc: "M-Pesa, cards & more" },
+  { icon: "🔒", title: "Secure Payment", desc: "M-Pesa, PayPal & cards" },
   { icon: "✅", title: "Authentic Products", desc: "Verified religious goods" },
   { icon: "📦", title: "Fast Delivery", desc: "Nairobi & nationwide" },
 ];
 
 const categoryIcon = { books: "📖", articles: "✝️", av: "🎵" };
+const badgeColor = {
+  "Best Seller": "bg-red-600",
+  Popular: "bg-blue-600",
+  New: "bg-green-600",
+};
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
@@ -147,6 +152,7 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* Loading skeleton */}
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -197,23 +203,26 @@ export default function Home() {
   );
 }
 
+// ── Product Card ──
+// The entire card is wrapped in a Link so clicking anywhere
+// on the card — icon, title, price — takes you to the product page
 function ProductCard({ product, onAddToCart }) {
   const [added, setAdded] = useState(false);
 
-  function handleAddToCart() {
+  function handleAddToCart(e) {
+    e.preventDefault(); // stops the Link from firing when clicking Add to Cart
+    e.stopPropagation(); // stops the click bubbling up to the Link
     onAddToCart();
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   }
 
-  const badgeColor = {
-    "Best Seller": "bg-red-600",
-    Popular: "bg-blue-600",
-    New: "bg-green-600",
-  };
-
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col">
+    <Link
+      to={`/product/${product._id}`}
+      className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col cursor-pointer"
+    >
+      {/* Image area — clicking here goes to product page */}
       <div className="relative bg-gray-100 h-44 flex items-center justify-center">
         <span className="text-5xl opacity-30">
           {categoryIcon[product.category]}
@@ -226,6 +235,8 @@ function ProductCard({ product, onAddToCart }) {
           </span>
         )}
       </div>
+
+      {/* Info area — clicking here goes to product page */}
       <div className="p-4 flex flex-col flex-1">
         <p className="text-sm font-semibold text-gray-800 leading-tight flex-1">
           {product.name}
@@ -233,21 +244,17 @@ function ProductCard({ product, onAddToCart }) {
         <p className="text-red-700 font-bold mt-1">
           KES {product.price.toLocaleString()}
         </p>
-        <div className="flex gap-2 mt-3">
-          <Link
-            to={`/product/${product._id}`}
-            className="flex-1 text-center border border-red-600 text-red-700 text-xs py-1.5 rounded-lg hover:bg-red-50 transition"
-          >
-            View
-          </Link>
-          <button
-            onClick={handleAddToCart}
-            className={`flex-1 text-white text-xs py-1.5 rounded-lg transition ${added ? "bg-green-600" : "bg-red-700 hover:bg-red-800"}`}
-          >
-            {added ? "✓ Added!" : "Add to Cart"}
-          </button>
-        </div>
+
+        {/* Add to Cart button — clicking here adds to cart but does NOT navigate */}
+        <button
+          onClick={handleAddToCart}
+          className={`w-full mt-3 text-white text-xs py-1.5 rounded-lg transition ${
+            added ? "bg-green-600" : "bg-red-700 hover:bg-red-800"
+          }`}
+        >
+          {added ? "✓ Added!" : "Add to Cart"}
+        </button>
       </div>
-    </div>
+    </Link>
   );
 }
