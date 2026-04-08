@@ -8,7 +8,7 @@ const categories = [
     id: "books",
     label: "Religious Books",
     description: "Bibles, prayer books & more",
-    icon: "📖",
+    icon: <img src="/book n.jpg" alt="books" />,
     color: "bg-red-50 border-red-200 text-red-800",
     btnColor: "bg-red-700 hover:bg-red-800",
   },
@@ -16,7 +16,7 @@ const categories = [
     id: "articles",
     label: "Religious Articles",
     description: "Rosaries, crucifixes, medals",
-    icon: "✝️",
+    icon: <img src="/articles.jpg" alt="image of articles" />,
     color: "bg-blue-50 border-blue-200 text-blue-800",
     btnColor: "bg-blue-700 hover:bg-blue-800",
   },
@@ -24,7 +24,7 @@ const categories = [
     id: "av",
     label: "Audio & Video",
     description: "CDs, DVDs, USB content",
-    icon: "🎵",
+    icon: <img src="/AV.jpg" alt="image of audio-visuals" />,
     color: "bg-green-50 border-green-200 text-green-800",
     btnColor: "bg-green-700 hover:bg-green-800",
   },
@@ -60,18 +60,10 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-0">
       {/* ── HERO ── */}
-      <section className="bg-red-700 text-white">
+      <section className="bg-red-400 text-white">
         <div className="max-w-7xl mx-auto px-4 py-20 flex flex-col items-center text-center gap-6">
-          <span className="text-6xl">✝</span>
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-            Find Your Faith.
-            <br />
-            <span className="text-red-200">Deepen Your Devotion.</span>
-          </h1>
-          <p className="text-red-100 text-lg max-w-xl">
-            Kenya's trusted Catholic online store. Browse books, rosaries,
-            medals, audio-visual content and much more — all in one place.
-          </p>
+          <img src="/Alberionesm.png" alt="Image of Alberione" />
+
           <div className="flex flex-wrap gap-4 justify-center mt-2">
             <Link
               to="/shop"
@@ -90,7 +82,7 @@ export default function Home() {
       </section>
 
       {/* ── TRUST BAR ── */}
-      <section className="bg-blue-900 text-white">
+      <section className="bg-blue-700 text-white">
         <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4">
           {trustPoints.map((t) => (
             <div key={t.title} className="flex items-center gap-3">
@@ -204,8 +196,7 @@ export default function Home() {
 }
 
 // ── Product Card ──
-// The entire card is wrapped in a Link so clicking anywhere
-// on the card — icon, title, price — takes you to the product page
+
 function ProductCard({ product, onAddToCart }) {
   const [added, setAdded] = useState(false);
 
@@ -223,10 +214,18 @@ function ProductCard({ product, onAddToCart }) {
       className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col cursor-pointer"
     >
       {/* Image area — clicking here goes to product page */}
-      <div className="relative bg-gray-100 h-44 flex items-center justify-center">
-        <span className="text-5xl opacity-30">
-          {categoryIcon[product.category]}
-        </span>
+      <div className="relative bg-gray-100 h-44 flex items-center justify-center overflow-hidden">
+        {product.images && product.images.length > 0 ? (
+          <img
+            src={product.images[0]}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-5xl opacity-30">
+            {categoryIcon[product.category]}
+          </span>
+        )}
         {product.badge && (
           <span
             className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${badgeColor[product.badge]}`}

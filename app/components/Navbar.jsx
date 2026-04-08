@@ -43,9 +43,9 @@ export default function Navbar() {
   }
 
   return (
-    <header className="bg-red-700 text-white shadow-md sticky top-0 z-50">
+    <header className="bg-blue-700 text-white shadow-md sticky top-0 z-50">
       {/* Top bar */}
-      <div className="bg-red-900 text-xs text-center py-1 text-red-100">
+      <div className="bg-red-700 text-xs text-center py-1 text-red-100">
         Free shipping on orders over KES 3,000 | Catholic Online Store Kenya
       </div>
 
@@ -53,7 +53,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="text-2xl">✝</span>
+          <img
+            className="h-20 w-auto"
+            src="/paulines2 logo.png"
+            alt="Pauline Logo"
+          />
           <span className="hidden sm:block leading-tight">
             Catholic
             <br />

@@ -50,7 +50,12 @@ export const productAPI = {
     const query = new URLSearchParams(params).toString();
     return fetch(`${BASE_URL}/products?${query}`).then(handleResponse);
   },
-
+  getAllAdmin: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${BASE_URL}/products/admin/all?${query}`, {
+      headers: headers(true),
+    }).then(handleResponse);
+  },
   getFeatured: () =>
     fetch(`${BASE_URL}/products/featured`).then(handleResponse),
 

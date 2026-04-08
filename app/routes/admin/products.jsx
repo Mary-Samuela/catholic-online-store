@@ -1,211 +1,214 @@
-import { useState } from "react";
-
-const initialProducts = [
-  {
-    id: 1,
-    name: "Holy Bible (RSV Catholic Edition)",
-    price: 1200,
-    category: "books",
-    stock: 12,
-    status: "active",
-  },
-  {
-    id: 2,
-    name: "Catechism of the Catholic Church",
-    price: 1500,
-    category: "books",
-    stock: 8,
-    status: "active",
-  },
-  {
-    id: 3,
-    name: "Daily Roman Missal",
-    price: 2200,
-    category: "books",
-    stock: 5,
-    status: "active",
-  },
-  {
-    id: 7,
-    name: "Wooden Rosary Beads",
-    price: 450,
-    category: "articles",
-    stock: 30,
-    status: "active",
-  },
-  {
-    id: 8,
-    name: "Crucifix – Wall Mount (30cm)",
-    price: 950,
-    category: "articles",
-    stock: 7,
-    status: "active",
-  },
-  {
-    id: 9,
-    name: "Miraculous Medal (Silver)",
-    price: 300,
-    category: "articles",
-    stock: 50,
-    status: "active",
-  },
-  {
-    id: 12,
-    name: "Priest Vestment Set",
-    price: 8500,
-    category: "articles",
-    stock: 3,
-    status: "active",
-  },
-  {
-    id: 13,
-    name: "Divine Mercy Novena CD",
-    price: 800,
-    category: "av",
-    stock: 18,
-    status: "active",
-  },
-  {
-    id: 14,
-    name: "Gregorian Chant DVD",
-    price: 700,
-    category: "av",
-    stock: 0,
-    status: "inactive",
-  },
-  {
-    id: 15,
-    name: "Rosary Audio USB (All Mysteries)",
-    price: 1100,
-    category: "av",
-    stock: 22,
-    status: "active",
-  },
-];
+import { useState, useEffect } from "react";
+import { productAPI, uploadAPI } from "../../services/api";
 
 const categoryIcon = { books: "📖", articles: "✝️", av: "🎵" };
+
 const EMPTY_FORM = {
   name: "",
+  description: "",
   price: "",
   category: "books",
   stock: "",
+  badge: "",
   status: "active",
+  details: "", // comma separated, we'll split later
+  images: [],
 };
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
-  const [editProduct, setEditProduct] = useState(null); // null = adding new
+  const [editProduct, setEditProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [imagePreview, setImagePreview] = useState([]);
 
-  // ── Filtered list ──
+  // Load products from API
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  async function fetchProducts() {
+    setLoading(true);
+    try {
+      const data = await productAPI.getAllAdmin();
+      setProducts(data.products);
+    } catch (err) {
+      showToast("Failed to load products", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchCat = catFilter === "all" || p.category === catFilter;
     return matchSearch && matchCat;
   });
 
-  // ── Show toast ──
   function showToast(msg, type = "success") {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   }
 
-  // ── Open modal ──
   function openAdd() {
     setEditProduct(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
+    setImagePreview([]);
     setShowModal(true);
   }
 
   function openEdit(product) {
     setEditProduct(product);
     setForm({
-      name: product.name,
-      price: product.price,
-      category: product.category,
-      stock: product.stock,
-      status: product.status,
+      name: product.name || "",
+      description: product.description || "",
+      price: product.price || "",
+      category: product.category || "books",
+      stock: product.stock || "",
+      badge: product.badge || "",
+      status: product.status || "active",
+      details: (product.details || []).join(", "),
+      images: product.images || [],
     });
+    setImagePreview(product.images || []);
     setFormErrors({});
     setShowModal(true);
   }
 
-  // ── Validate form ──
   function validate() {
     const e = {};
     if (!form.name.trim()) e.name = "Product name is required.";
+    if (!form.description.trim()) e.description = "Description is required.";
     if (!form.price || form.price <= 0) e.price = "Enter a valid price.";
     if (form.stock === "" || form.stock < 0)
       e.stock = "Enter a valid stock quantity.";
     return e;
   }
 
-  // ── Save product ──
-  function handleSave() {
+  // ── Handle image file selection and upload ──
+  async function handleImageChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    const localPreview = URL.createObjectURL(file);
+    setImagePreview((prev) => [...prev, localPreview]);
+
+    setUploading(true);
+    try {
+      const result = await uploadAPI.uploadImage(file);
+      // Replace local preview with real Cloudinary URL
+      setImagePreview((prev) => [...prev.slice(0, -1), result.url]);
+      setForm((prev) => ({
+        ...prev,
+        images: [...prev.images, result.url],
+      }));
+      showToast("Image uploaded successfully!");
+    } catch (err) {
+      // Remove the preview if upload failed
+      setImagePreview((prev) => prev.slice(0, -1));
+      showToast("Image upload failed: " + err.message, "error");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeImage(index) {
+    setImagePreview((prev) => prev.filter((_, i) => i !== index));
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  }
+
+  async function handleSave() {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setFormErrors(errs);
       return;
     }
 
-    if (editProduct) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editProduct.id
-            ? {
-                ...p,
-                ...form,
-                price: Number(form.price),
-                stock: Number(form.stock),
-              }
-            : p,
-        ),
-      );
-      showToast("Product updated successfully!");
-    } else {
-      const newProduct = {
-        ...form,
-        id: Date.now(),
+    setSaving(true);
+    try {
+      const productData = {
+        name: form.name,
+        description: form.description,
         price: Number(form.price),
+        category: form.category,
         stock: Number(form.stock),
+        badge: form.badge || null,
+        status: form.status,
+        images: form.images,
+        details: form.details
+          ? form.details
+              .split(",")
+              .map((d) => d.trim())
+              .filter(Boolean)
+          : [],
       };
-      setProducts((prev) => [newProduct, ...prev]);
-      showToast("Product added successfully!");
+
+      if (editProduct) {
+        await productAPI.update(editProduct._id, productData);
+        showToast("Product updated successfully!");
+      } else {
+        await productAPI.create(productData);
+        showToast("Product added successfully!");
+      }
+
+      setShowModal(false);
+      fetchProducts(); // reload from API
+    } catch (err) {
+      showToast(err.message || "Failed to save product", "error");
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   }
 
-  // ── Delete product ──
-  function handleDelete(id) {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    setDeleteConfirm(null);
-    showToast("Product deleted.", "error");
+  async function handleDelete(id) {
+    try {
+      await productAPI.delete(id);
+      showToast("Product deleted.", "error");
+      setDeleteConfirm(null);
+      fetchProducts();
+    } catch (err) {
+      showToast(err.message || "Failed to delete product", "error");
+    }
   }
 
-  // ── Toggle status ──
-  function toggleStatus(id) {
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, status: p.status === "active" ? "inactive" : "active" }
-          : p,
-      ),
+  async function toggleStatus(product) {
+    try {
+      await productAPI.update(product._id, {
+        status: product.status === "active" ? "inactive" : "active",
+      });
+      fetchProducts();
+    } catch (err) {
+      showToast("Failed to update status", "error");
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6 relative">
-      {/* ── Toast ── */}
+      {/* Toast */}
       {toast && (
         <div
-          className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-semibold shadow-lg transition ${
+          className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-semibold shadow-lg ${
             toast.type === "success" ? "bg-green-600" : "bg-red-600"
           }`}
         >
@@ -213,7 +216,7 @@ export default function AdminProducts() {
         </div>
       )}
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Products</h1>
@@ -229,7 +232,7 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      {/* ── Filters ── */}
+      {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <input
           type="text"
@@ -250,7 +253,7 @@ export default function AdminProducts() {
         </select>
       </div>
 
-      {/* ── Products table ── */}
+      {/* Table */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -274,36 +277,43 @@ export default function AdminProducts() {
               ) : (
                 filtered.map((product) => (
                   <tr
-                    key={product.id}
+                    key={product._id}
                     className="border-b border-gray-50 hover:bg-gray-50 transition"
                   >
-                    {/* Name */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                          <span className="text-lg opacity-40">
-                            {categoryIcon[product.category]}
-                          </span>
+                        {/* Show real image if available */}
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-lg opacity-40">
+                              {categoryIcon[product.category]}
+                            </span>
+                          )}
                         </div>
-                        <span className="font-medium text-gray-800 leading-tight">
-                          {product.name}
-                        </span>
+                        <div>
+                          <p className="font-medium text-gray-800 leading-tight">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">
+                            {product.description?.slice(0, 60)}...
+                          </p>
+                        </div>
                       </div>
                     </td>
-
-                    {/* Category */}
                     <td className="px-4 py-3 capitalize text-gray-500">
                       {product.category === "av"
                         ? "Audio & Video"
                         : product.category}
                     </td>
-
-                    {/* Price */}
                     <td className="px-4 py-3 text-right font-semibold text-gray-800">
                       KES {product.price.toLocaleString()}
                     </td>
-
-                    {/* Stock */}
                     <td className="px-4 py-3 text-center">
                       <span
                         className={`font-semibold ${
@@ -317,11 +327,9 @@ export default function AdminProducts() {
                         {product.stock === 0 ? "Out of stock" : product.stock}
                       </span>
                     </td>
-
-                    {/* Status toggle */}
                     <td className="px-4 py-3 text-center">
                       <button
-                        onClick={() => toggleStatus(product.id)}
+                        onClick={() => toggleStatus(product)}
                         className={`text-xs font-semibold px-3 py-1 rounded-full transition ${
                           product.status === "active"
                             ? "bg-green-100 text-green-700 hover:bg-green-200"
@@ -331,8 +339,6 @@ export default function AdminProducts() {
                         {product.status === "active" ? "Active" : "Inactive"}
                       </button>
                     </td>
-
-                    {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
                         <button
@@ -342,7 +348,7 @@ export default function AdminProducts() {
                           Edit
                         </button>
                         <button
-                          onClick={() => setDeleteConfirm(product.id)}
+                          onClick={() => setDeleteConfirm(product._id)}
                           className="text-xs border border-red-300 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition font-medium"
                         >
                           Delete
@@ -357,13 +363,13 @@ export default function AdminProducts() {
         </div>
       </div>
 
-      {/* ── Add / Edit modal ── */}
+      {/* Add / Edit modal */}
       {showModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-40 flex items-center justify-center px-4"
+          className="fixed inset-0 bg-black bg-opacity-40 z-40 flex items-start justify-center px-4 py-8 overflow-y-auto"
           onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
         >
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col gap-5 shadow-xl">
+          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 flex flex-col gap-5 shadow-xl">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-800">
                 {editProduct ? "Edit Product" : "Add New Product"}
@@ -400,7 +406,55 @@ export default function AdminProducts() {
                 )}
               </div>
 
-              {/* Price & Stock row */}
+              {/* Description */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  value={form.description}
+                  rows={4}
+                  onChange={(e) => {
+                    setForm((p) => ({ ...p, description: e.target.value }));
+                    setFormErrors((p) => ({ ...p, description: null }));
+                  }}
+                  placeholder="Describe the product in detail..."
+                  className={`border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none ${
+                    formErrors.description
+                      ? "border-red-400 bg-red-50"
+                      : "border-gray-300"
+                  }`}
+                />
+                {formErrors.description && (
+                  <p className="text-xs text-red-500">
+                    {formErrors.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Details */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Product details
+                  <span className="text-gray-400 font-normal ml-1">
+                    (comma separated)
+                  </span>
+                </label>
+                <input
+                  value={form.details}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, details: e.target.value }))
+                  }
+                  placeholder="e.g. Hardcover, 300 pages, Publisher: Ignatius Press"
+                  className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                />
+                <p className="text-xs text-gray-400">
+                  Each item separated by a comma will appear as a bullet point
+                  on the product page.
+                </p>
+              </div>
+
+              {/* Price & Stock */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">
@@ -450,8 +504,8 @@ export default function AdminProducts() {
                 </div>
               </div>
 
-              {/* Category & Status row */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Category, Badge, Status */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">
                     Category
@@ -470,6 +524,23 @@ export default function AdminProducts() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">
+                    Badge
+                  </label>
+                  <select
+                    value={form.badge}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, badge: e.target.value }))
+                    }
+                    className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+                  >
+                    <option value="">No badge</option>
+                    <option value="Best Seller">Best Seller</option>
+                    <option value="Popular">Popular</option>
+                    <option value="New">New</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">
                     Status
                   </label>
                   <select
@@ -484,6 +555,56 @@ export default function AdminProducts() {
                   </select>
                 </div>
               </div>
+
+              {/* Image upload */}
+              {/* Image area */}
+              <div className="flex flex-col gap-4">
+                <div className="relative bg-gray-100 rounded-xl h-80 flex items-center justify-center overflow-hidden">
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-9xl opacity-20">
+                      {categoryIcon[product.category]}
+                    </span>
+                  )}
+                  {product.badge && (
+                    <span
+                      className={`absolute top-4 left-4 text-white text-sm font-bold px-3 py-1 rounded-full ${
+                        product.badge === "Best Seller"
+                          ? "bg-red-600"
+                          : product.badge === "Popular"
+                            ? "bg-blue-600"
+                            : "bg-green-600"
+                      }`}
+                    >
+                      {product.badge}
+                    </span>
+                  )}
+                  {product.stock <= 5 && product.stock > 0 && (
+                    <span className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      Only {product.stock} left!
+                    </span>
+                  )}
+                </div>
+
+                {/* Thumbnail strip */}
+                {product.images && product.images.length > 1 && (
+                  <div className="flex gap-2">
+                    {product.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`View ${i + 1}`}
+                        className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-red-400 transition"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Modal actions */}
@@ -496,16 +617,25 @@ export default function AdminProducts() {
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 bg-red-700 text-white font-bold py-2.5 rounded-xl hover:bg-red-800 transition"
+                disabled={saving || uploading}
+                className={`flex-1 font-bold py-2.5 rounded-xl transition text-white ${
+                  saving || uploading
+                    ? "bg-red-400 cursor-not-allowed"
+                    : "bg-red-700 hover:bg-red-800"
+                }`}
               >
-                {editProduct ? "Save Changes" : "Add Product"}
+                {saving
+                  ? "Saving..."
+                  : editProduct
+                    ? "Save Changes"
+                    : "Add Product"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Delete confirmation modal ── */}
+      {/* Delete confirmation */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-40 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4 shadow-xl">
@@ -515,8 +645,7 @@ export default function AdminProducts() {
                 Delete Product?
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                This action cannot be undone. The product will be permanently
-                removed.
+                This action cannot be undone.
               </p>
             </div>
             <div className="flex gap-3">

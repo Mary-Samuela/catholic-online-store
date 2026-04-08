@@ -27,27 +27,28 @@ const badgeColor = {
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // ── Always read category from URL so navbar links work ──
   const urlCategory = searchParams.get("category") || "all";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState(urlCategory);
   const [sort, setSort] = useState("default");
   const [maxPrice, setMaxPrice] = useState(10000);
   const [totalCount, setTotalCount] = useState(0);
 
   const { addToCart } = useCart();
 
-  // Fetch products whenever filters change
+  // ── Fetch whenever URL category, search, sort or price changes ──
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       setError(null);
       try {
         const params = {};
-        if (category !== "all") params.category = category;
+        if (urlCategory !== "all") params.category = urlCategory;
         if (search) params.search = search;
         if (sort !== "default") params.sort = sort;
         if (maxPrice < 10000) params.maxPrice = maxPrice;
@@ -62,14 +63,16 @@ export default function Shop() {
       }
     };
 
-    // Debounce by 400ms so we don't fire on every keystroke
-    const timer = setTimeout(fetchProducts, 400);
+    const timer = setTimeout(fetchProducts, 300);
     return () => clearTimeout(timer);
-  }, [category, search, sort, maxPrice]);
+  }, [urlCategory, search, sort, maxPrice]); // ← urlCategory from URL, not local state
 
   function handleCategory(val) {
-    setCategory(val);
-    setSearchParams(val === "all" ? {} : { category: val });
+    if (val === "all") {
+      setSearchParams({});
+    } else {
+      setSearchParams({ category: val });
+    }
   }
 
   return (
@@ -86,13 +89,18 @@ export default function Shop() {
               Home
             </Link>
             {" / "}
-            <span className="text-white">Shop</span>
+            <span className="text-white">
+              {urlCategory === "all"
+                ? "Shop"
+                : categoryOptions.find((c) => c.value === urlCategory)?.label ||
+                  "Shop"}
+            </span>
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <aside className="w-full md:w-64 shrink-0 flex flex-col gap-6">
           {/* Search */}
           <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -115,7 +123,7 @@ export default function Shop() {
                   key={opt.value}
                   onClick={() => handleCategory(opt.value)}
                   className={`text-left text-sm px-3 py-2 rounded-lg transition ${
-                    category === opt.value
+                    urlCategory === opt.value
                       ? "bg-red-700 text-white font-semibold"
                       : "text-gray-600 hover:bg-red-50 hover:text-red-700"
                   }`}
@@ -126,7 +134,7 @@ export default function Shop() {
             </div>
           </div>
 
-          {/* Price range */}
+          {/* Price */}
           <div className="bg-white border border-gray-200 rounded-xl p-4">
             <h3 className="font-semibold text-gray-700 mb-3">Max Price</h3>
             <input
@@ -146,7 +154,7 @@ export default function Shop() {
             </p>
           </div>
 
-          {/* Clear filters */}
+          {/* Clear */}
           <button
             onClick={() => {
               setSearch("");
@@ -160,9 +168,8 @@ export default function Shop() {
           </button>
         </aside>
 
-        {/* ── Main content ── */}
+        {/* Main */}
         <div className="flex-1">
-          {/* Sort bar */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-gray-500">
               Showing{" "}
@@ -184,7 +191,6 @@ export default function Shop() {
             </select>
           </div>
 
-          {/* Loading skeleton */}
           {loading ? (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -210,9 +216,7 @@ export default function Shop() {
             <div className="text-center py-24 text-gray-400">
               <p className="text-5xl mb-4">🔍</p>
               <p className="text-lg font-semibold">No products found</p>
-              <p className="text-sm mt-1">
-                Try adjusting your filters or search term
-              </p>
+              <p className="text-sm mt-1">Try adjusting your filters</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -231,12 +235,11 @@ export default function Shop() {
   );
 }
 
-// ── Product card ──
 function ShopProductCard({ product, onAddToCart }) {
   const [added, setAdded] = useState(false);
 
   function handleAddToCart(e) {
-    e.preventDefault(); // stop card click from firing
+    e.preventDefault();
     e.stopPropagation();
     onAddToCart();
     setAdded(true);
@@ -259,10 +262,19 @@ function ShopProductCard({ product, onAddToCart }) {
       to={`/product/${product._id}`}
       className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition flex flex-col cursor-pointer"
     >
-      <div className="relative bg-gray-100 h-40 flex items-center justify-center">
-        <span className="text-5xl opacity-25">
-          {categoryIcon[product.category]}
-        </span>
+      {/* Image */}
+      <div className="relative bg-gray-100 h-40 flex items-center justify-center overflow-hidden">
+        {product.images && product.images.length > 0 ? (
+          <img
+            src={product.images[0]}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-5xl opacity-25">
+            {categoryIcon[product.category]}
+          </span>
+        )}
         {product.badge && (
           <span
             className={`absolute top-2 left-2 text-white text-xs font-bold px-2 py-0.5 rounded ${badgeColor[product.badge]}`}
@@ -271,6 +283,7 @@ function ShopProductCard({ product, onAddToCart }) {
           </span>
         )}
       </div>
+
       <div className="p-3 flex flex-col flex-1">
         <p className="text-xs text-gray-400 capitalize mb-1">
           {product.category === "av" ? "Audio & Video" : product.category}
@@ -282,16 +295,14 @@ function ShopProductCard({ product, onAddToCart }) {
         <p className="text-red-700 font-bold mt-2 text-sm">
           KES {product.price.toLocaleString()}
         </p>
-        <div className="flex gap-1.5 mt-3">
-          <button
-            onClick={handleAddToCart}
-            className={`w-full text-white text-xs py-1.5 rounded-lg transition ${
-              added ? "bg-green-600" : "bg-red-700 hover:bg-red-800"
-            }`}
-          >
-            {added ? "✓ Added!" : "Add to Cart"}
-          </button>
-        </div>
+        <button
+          onClick={handleAddToCart}
+          className={`w-full mt-3 text-white text-xs py-1.5 rounded-lg transition ${
+            added ? "bg-green-600" : "bg-red-700 hover:bg-red-800"
+          }`}
+        >
+          {added ? "✓ Added!" : "Add to Cart"}
+        </button>
       </div>
     </Link>
   );
