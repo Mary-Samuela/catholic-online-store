@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useLocation } from "react-router";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -7,14 +7,40 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
+  const location = useLocation();
 
   const navLinks = [
-    { to: "/", label: "Home" },
-    { to: "/shop", label: "Shop" },
-    { to: "/shop?category=books", label: "Books" },
-    { to: "/shop?category=articles", label: "Articles" },
-    { to: "/shop?category=av", label: "Audio & Video" },
+    { to: "/", label: "Home", exact: true },
+    { to: "/shop", label: "Shop", exact: true },
+    { to: "/shop?category=books", label: "Books", exact: false },
+    { to: "/shop?category=articles", label: "Articles", exact: false },
+    { to: "/shop?category=av", label: "Audio & Video", exact: false },
   ];
+
+  // ── Custom active check ──
+  // This checks the full path + search string so each link
+  // is only highlighted when it exactly matches the current URL
+  function isActive(link) {
+    const currentPath = location.pathname;
+    const currentSearch = location.search;
+    const currentFull = currentPath + currentSearch;
+
+    if (link.exact && link.to === "/") {
+      return currentPath === "/";
+    }
+
+    // For links with query strings like /shop?category=books
+    if (link.to.includes("?")) {
+      return currentFull === link.to;
+    }
+
+    // For plain paths like /shop — only match if no category param
+    if (link.to === "/shop") {
+      return currentPath === "/shop" && !currentSearch.includes("category");
+    }
+
+    return currentFull === link.to;
+  }
 
   return (
     <header className="bg-red-700 text-white shadow-md sticky top-0 z-50">
@@ -40,23 +66,23 @@ export default function Navbar() {
         {/* Desktop nav links */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           {navLinks.map((link) => (
-            <NavLink
+            <Link
               key={link.to}
               to={link.to}
-              className={({ isActive }) =>
-                isActive
+              className={
+                isActive(link)
                   ? "text-white border-b-2 border-white pb-0.5"
                   : "text-red-100 hover:text-white transition"
               }
             >
               {link.label}
-            </NavLink>
+            </Link>
           ))}
         </nav>
 
         {/* Right side icons */}
         <div className="flex items-center gap-4">
-          {/* Account area */}
+          {/* Account */}
           {user ? (
             <div className="hidden sm:flex items-center gap-3">
               <Link
@@ -101,7 +127,7 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Cart icon with live count */}
+          {/* Cart */}
           <Link to="/cart" className="relative text-red-100 hover:text-white">
             <svg
               className="w-5 h-5"
@@ -123,7 +149,7 @@ export default function Navbar() {
             )}
           </Link>
 
-          {/* Mobile hamburger */}
+          {/* Hamburger */}
           <button
             className="md:hidden text-white"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -154,19 +180,24 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu dropdown */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-red-800 px-4 pb-4 flex flex-col gap-3 text-sm">
           {navLinks.map((link) => (
-            <NavLink
+            <Link
               key={link.to}
               to={link.to}
               onClick={() => setMenuOpen(false)}
-              className="text-red-100 hover:text-white py-1 border-b border-red-700"
+              className={`py-1 border-b border-red-700 ${
+                isActive(link)
+                  ? "text-white font-semibold"
+                  : "text-red-100 hover:text-white"
+              }`}
             >
               {link.label}
-            </NavLink>
+            </Link>
           ))}
+
           {user ? (
             <>
               <Link
@@ -204,6 +235,7 @@ export default function Navbar() {
               Login / Register
             </Link>
           )}
+
           <Link
             to="/cart"
             onClick={() => setMenuOpen(false)}
