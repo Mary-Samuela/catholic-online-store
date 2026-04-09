@@ -140,3 +140,23 @@ export const userAPI = {
       headers: headers(true),
     }).then(handleResponse),
 };
+// ══════════════════════════════════════════
+//  UPLOAD
+// ══════════════════════════════════════════
+export const uploadAPI = {
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${BASE_URL}/products/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Upload failed");
+    return data;
+  },
+};
