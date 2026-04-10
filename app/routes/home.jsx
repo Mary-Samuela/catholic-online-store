@@ -60,20 +60,20 @@ export default function Home() {
   return (
     <div className="flex flex-col gap-0">
       {/* ── HERO ── */}
-      <section className="bg-red-400 text-white">
+      <section className="bg-[url('/Alberionenobg.png')] bg-cover bg-center min-h-screen text-white">
         <div className="max-w-7xl mx-auto px-4 py-20 flex flex-col items-center text-center gap-6">
-          <img src="/Alberionesm.png" alt="Image of Alberione" />
+          {/* <img src="/Alberionesm.png" alt="Image of Alberione" /> */}
 
           <div className="flex flex-wrap gap-4 justify-center mt-2">
             <Link
               to="/shop"
-              className="bg-white text-red-700 font-semibold px-8 py-3 rounded-lg hover:bg-red-50 transition"
+              className="bg-red-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-red-400 transition fixed top-1/5 left-1/4 z-10"
             >
               Shop Now
             </Link>
             <Link
               to="/shop"
-              className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-red-600 transition"
+              className="bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-blue-400 transition fixed top-1/5 left-1/18 z-10"
             >
               Browse Categories
             </Link>

@@ -54,7 +54,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 font-bold text-lg">
           <img
-            className="h-20 w-auto"
+            className="h-20 w-auto invert brightness-0"
             src="/paulines2 logo.png"
             alt="Pauline Logo"
           />
